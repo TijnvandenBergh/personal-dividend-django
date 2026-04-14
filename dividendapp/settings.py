@@ -120,7 +120,7 @@ FX_RATES_FROM_EUR = {"EUR": 1.0, "USD": 1.08, "GBP": 0.86}
 YAHOO_TICKER_MAP = {
     "TDIV": "TDIV.AS",
     "VHYL": "VHYL.AS",
-    "ISPA": "ISPA.AS",
+    "ISPA": "ISPA.DE",
     "FGQI": "FGQI.L",
     "SPYD": "SPYD",
 }

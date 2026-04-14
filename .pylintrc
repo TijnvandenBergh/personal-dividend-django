@@ -1,6 +1,7 @@
 [MAIN]
 load-plugins=pylint_django
 django-settings-module=dividendapp.settings
+ignore=migrations
 
 [MESSAGES CONTROL]
 disable=

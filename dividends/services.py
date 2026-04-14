@@ -28,7 +28,7 @@ class PricedEtf:
 
 
 @dataclass
-class AllocationItem:
+class AllocationItem:  # pylint: disable=too-many-instance-attributes
     id: int
     ticker: str
     name: str
@@ -82,7 +82,7 @@ def calc_allocation(budget_cents: int, priced: Iterable[PricedEtf]) -> Allocatio
     )
 
 
-def _mock_fetch_price_cents(ticker: str) -> int:
+def _mock_fetch_price_cents(_ticker: str) -> int:
     """Fallback: random price in cents. Deterministic tests can monkeypatch this."""
     return int(5000 + random.random() * 5000)
 
@@ -91,14 +91,14 @@ def _fetch_price_cents_yfinance(ticker: str) -> int | None:
     """Fetch the latest market price via Yahoo Finance, return cents or None."""
     yahoo_symbol = getattr(settings, "YAHOO_TICKER_MAP", {}).get(ticker, ticker)
     try:
-        import yfinance as yf  # noqa: E402
+        import yfinance as yf  # noqa: E402  pylint: disable=import-outside-toplevel
 
         info = yf.Ticker(yahoo_symbol).fast_info
         price = getattr(info, "last_price", None)
         if price is None or price <= 0:
             return None
         return int(round(price * 100))
-    except Exception:
+    except (OSError, ValueError, KeyError, AttributeError):
         logger.warning("yfinance fetch failed for %s (%s)", ticker, yahoo_symbol, exc_info=True)
         return None
 
@@ -126,28 +126,31 @@ def price_etfs() -> list[PricedEtf]:
     ]
 
 
+def _parse_ecb_response(data: dict) -> dict[str, float]:
+    """Extract currency rates from ECB JSON response."""
+    rates: dict[str, float] = {"EUR": 1.0}
+    series = data["dataSets"][0]["series"]
+    currency_dim = next(
+        d for d in data["structure"]["dimensions"]["series"] if d["id"] == "CURRENCY"
+    )
+    for key, series_data in series.items():
+        idx = int(key.split(":")[1])
+        obs = series_data["observations"]
+        rates[currency_dim["values"][idx]["id"]] = obs[max(obs.keys())][0]
+    return rates
+
+
 def _fetch_ecb_rates() -> dict[str, float] | None:
     """Fetch latest FX rates from the ECB API. Returns {currency: rate} or None."""
-    import urllib.request
-    import json
+    import json            # pylint: disable=import-outside-toplevel
+    import urllib.request  # pylint: disable=import-outside-toplevel
 
     url = "https://data-api.ecb.europa.eu/service/data/EXR/D.USD+GBP.EUR.SP00.A?lastNObservations=1&format=jsondata"
     try:
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json.loads(resp.read())
-        rates: dict[str, float] = {"EUR": 1.0}
-        series = data["dataSets"][0]["series"]
-        keys = data["structure"]["dimensions"]["series"]
-        currency_dim = next(d for d in keys if d["id"] == "CURRENCY")
-        for key, series_data in series.items():
-            idx = int(key.split(":")[1])
-            currency_code = currency_dim["values"][idx]["id"]
-            obs = series_data["observations"]
-            latest = obs[max(obs.keys())]
-            rates[currency_code] = latest[0]
-        return rates
-    except Exception:
+            return _parse_ecb_response(json.loads(resp.read()))
+    except (OSError, ValueError, KeyError, StopIteration):
         logger.warning("ECB FX rate fetch failed", exc_info=True)
         return None
 

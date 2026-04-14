@@ -10,7 +10,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .models import Contribution, Etf
-from .services import calc_allocation, convert_allocation, convert_to_eur, get_fx_rate, price_etfs, PricedEtf
+from .services import calc_allocation, convert_allocation, convert_to_eur, get_fx_rate, price_etfs
 
 
 def _months():
@@ -19,6 +19,14 @@ def _months():
         (5, "May"), (6, "June"), (7, "July"), (8, "August"),
         (9, "September"), (10, "October"), (11, "November"), (12, "December"),
     ]
+
+
+def _get_contribution_cents(user, year, month):
+    """Return (amount_cents, carry_in_cents) for a user's month, defaulting to 0."""
+    contribution = Contribution.objects.filter(user=user, year=year, month=month).first()
+    if contribution:
+        return contribution.amount_cents, contribution.carry_in_cents
+    return 0, 0
 
 
 @login_required
@@ -32,15 +40,10 @@ def dashboard(request):
     if not (2000 <= year <= 2100 and 1 <= month <= 12):
         return HttpResponseBadRequest("Invalid year/month")
 
-    contribution = Contribution.objects.filter(
-        user=request.user, year=year, month=month,
-    ).first()
-    amount_cents = contribution.amount_cents if contribution else 0
-    carry_in_cents = contribution.carry_in_cents if contribution else 0
-    budget_cents = amount_cents + carry_in_cents
+    amount_cents, carry_in_cents = _get_contribution_cents(request.user, year, month)
 
     priced = price_etfs()
-    monthly = calc_allocation(budget_cents, priced)
+    monthly = calc_allocation(amount_cents + carry_in_cents, priced)
 
     total_budget_cents = Contribution.objects.filter(user=request.user).aggregate(
         total=Sum(F("amount_cents") + F("carry_in_cents"))
@@ -48,9 +51,6 @@ def dashboard(request):
     cumulative = calc_allocation(total_budget_cents, priced)
 
     currency = request.session.get("currency", settings.DEFAULT_CURRENCY)
-    monthly_c = convert_allocation(monthly, currency)
-    cumulative_c = convert_allocation(cumulative, currency)
-
     rate = get_fx_rate(currency)
 
     return render(request, "dividends/dashboard.html", {
@@ -59,8 +59,8 @@ def dashboard(request):
         "amount": round(amount_cents * rate / 100, 2),
         "carry_in": round(carry_in_cents * rate / 100, 2),
         "months": _months(),
-        "monthly": monthly_c,
-        "cumulative": cumulative_c,
+        "monthly": convert_allocation(monthly, currency),
+        "cumulative": convert_allocation(cumulative, currency),
         "etfs_count": Etf.objects.count(),
     })
 

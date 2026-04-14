@@ -3,16 +3,29 @@ from __future__ import annotations
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from .models import Contribution, Etf, FxRate, Price
 from .services import (
-    AllocationResult, PricedEtf, calc_allocation, convert_allocation,
+    PricedEtf, calc_allocation, convert_allocation,
     convert_from_eur, convert_to_eur, get_fx_rate, get_live_price_cents, price_etfs,
 )
 
 User = get_user_model()
+
+
+class NetworkMockedTestCase(TestCase):
+    """Base class that patches out yfinance and ECB network calls."""
+
+    def setUp(self):
+        super().setUp()
+        patcher_yf = mock.patch("dividends.services._fetch_price_cents_yfinance", return_value=None)
+        patcher_ecb = mock.patch("dividends.services._fetch_ecb_rates", return_value=None)
+        patcher_yf.start()
+        patcher_ecb.start()
+        self.addCleanup(patcher_yf.stop)
+        self.addCleanup(patcher_ecb.stop)
 
 
 class AllocationMathTests(TestCase):
@@ -58,14 +71,12 @@ class AllocationMathTests(TestCase):
         self.assertEqual(convert_to_eur(5000, "EUR"), 5000)
 
     def test_as_dict_serializes(self):
-        r = AllocationResult(items=[], totals=None.__class__)  # type: ignore
-        # Just ensure calc_allocation produces serializable dict:
-        r2 = calc_allocation(0, [])
-        self.assertIn("items", r2.as_dict())
-        self.assertIn("totals", r2.as_dict())
+        result = calc_allocation(0, [])
+        self.assertIn("items", result.as_dict())
+        self.assertIn("totals", result.as_dict())
 
 
-class PriceServiceTests(TestCase):
+class PriceServiceTests(NetworkMockedTestCase):
     def test_price_is_cached(self):
         with mock.patch(
             "dividends.services._mock_fetch_price_cents", return_value=7777
@@ -121,7 +132,7 @@ class PriceServiceTests(TestCase):
         self.assertTrue(any(p.ticker == "ZZZ" for p in priced))
 
 
-class AuthTests(TestCase):
+class AuthTests(NetworkMockedTestCase):
     def test_register_creates_account_and_logs_in(self):
         r = self.client.post(reverse("accounts:register"), {
             "email": "a@b.co", "password": "secret12",
@@ -165,8 +176,9 @@ class AuthTests(TestCase):
         self.assertContains(r, "Invalid credentials")
 
 
-class DashboardTests(TestCase):
+class DashboardTests(NetworkMockedTestCase):
     def setUp(self):
+        super().setUp()
         self.user = User.objects.create_user(username="a@b.co", password="secret12")
         self.client.force_login(self.user)
 
@@ -192,8 +204,7 @@ class DashboardTests(TestCase):
         self.assertEqual(c.amount_cents, 50_000)
         self.assertEqual(c.carry_in_cents, 2_500)
 
-    @mock.patch("dividends.services._fetch_ecb_rates", return_value=None)
-    def test_save_contribution_converts_gbp_to_eur(self, _ecb):
+    def test_save_contribution_converts_gbp_to_eur(self):
         """When the session currency is GBP, the saved amount should be in EUR."""
         session = self.client.session
         session["currency"] = "GBP"
@@ -231,8 +242,9 @@ class DashboardTests(TestCase):
         self.assertEqual(r.status_code, 400)
 
 
-class PreferencesTests(TestCase):
+class PreferencesTests(NetworkMockedTestCase):
     def setUp(self):
+        super().setUp()
         self.user = User.objects.create_user(username="a@b.co", password="secret12")
         self.client.force_login(self.user)
 
