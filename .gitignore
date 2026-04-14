@@ -8,5 +8,4 @@ app.db-*
 staticfiles/
 .coverage
 htmlcov/
-*.mo
 .DS_Store

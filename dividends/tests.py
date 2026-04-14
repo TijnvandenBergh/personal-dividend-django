@@ -3,16 +3,29 @@ from __future__ import annotations
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
-from .models import Contribution, Etf, Price
+from .models import Contribution, Etf, FxRate, Price
 from .services import (
-    AllocationResult, PricedEtf, calc_allocation, convert_allocation,
-    get_live_price_cents, price_etfs,
+    PricedEtf, calc_allocation, convert_allocation,
+    convert_from_eur, convert_to_eur, get_fx_rate, get_live_price_cents, price_etfs,
 )
 
 User = get_user_model()
+
+
+class NetworkMockedTestCase(TestCase):
+    """Base class that patches out yfinance and ECB network calls."""
+
+    def setUp(self):
+        super().setUp()
+        patcher_yf = mock.patch("dividends.services._fetch_price_cents_yfinance", return_value=None)
+        patcher_ecb = mock.patch("dividends.services._fetch_ecb_rates", return_value=None)
+        patcher_yf.start()
+        patcher_ecb.start()
+        self.addCleanup(patcher_yf.stop)
+        self.addCleanup(patcher_ecb.stop)
 
 
 class AllocationMathTests(TestCase):
@@ -37,22 +50,33 @@ class AllocationMathTests(TestCase):
         self.assertEqual(r.items[0].spent_cents, 0)
         self.assertEqual(r.totals.rest_cents, 10_000)
 
-    def test_convert_allocation_scales_money_only(self):
+    @mock.patch("dividends.services._fetch_ecb_rates", return_value=None)
+    def test_convert_allocation_scales_money_only(self, _ecb):
         items = [PricedEtf(id=1, ticker="A", name="A", weight_pct=100, price_cents=1000)]
         r = calc_allocation(10_000, items)
         c = convert_allocation(r, "USD")  # 1.08
         self.assertEqual(c.items[0].shares, r.items[0].shares)
         self.assertEqual(c.totals.budget_cents, round(10_000 * 1.08))
 
+    @mock.patch("dividends.services._fetch_ecb_rates", return_value=None)
+    def test_convert_to_eur_round_trips(self, _ecb):
+        """Converting EUR→GBP→EUR should round-trip (within rounding)."""
+        original = 10000
+        gbp = convert_from_eur(original, "GBP")
+        self.assertEqual(gbp, 8600)
+        back = convert_to_eur(gbp, "GBP")
+        self.assertEqual(back, 10000)
+
+    def test_convert_to_eur_noop_for_eur(self):
+        self.assertEqual(convert_to_eur(5000, "EUR"), 5000)
+
     def test_as_dict_serializes(self):
-        r = AllocationResult(items=[], totals=None.__class__)  # type: ignore
-        # Just ensure calc_allocation produces serializable dict:
-        r2 = calc_allocation(0, [])
-        self.assertIn("items", r2.as_dict())
-        self.assertIn("totals", r2.as_dict())
+        result = calc_allocation(0, [])
+        self.assertIn("items", result.as_dict())
+        self.assertIn("totals", result.as_dict())
 
 
-class PriceServiceTests(TestCase):
+class PriceServiceTests(NetworkMockedTestCase):
     def test_price_is_cached(self):
         with mock.patch(
             "dividends.services._mock_fetch_price_cents", return_value=7777
@@ -62,6 +86,45 @@ class PriceServiceTests(TestCase):
             self.assertEqual(m.call_count, 1)
         self.assertEqual(Price.objects.filter(ticker="XYZ").count(), 1)
 
+    def test_yfinance_fallback_to_mock(self):
+        """When yfinance returns None, the mock fallback is used."""
+        with mock.patch(
+            "dividends.services._fetch_price_cents_yfinance", return_value=None
+        ), mock.patch(
+            "dividends.services._mock_fetch_price_cents", return_value=6000
+        ):
+            self.assertEqual(get_live_price_cents("FALLBACK"), 6000)
+        self.assertEqual(Price.objects.filter(ticker="FALLBACK").count(), 1)
+
+    def test_yfinance_success_skips_mock(self):
+        """When yfinance returns a price, the mock is not called."""
+        with mock.patch(
+            "dividends.services._fetch_price_cents_yfinance", return_value=9999
+        ) as yf_mock, mock.patch(
+            "dividends.services._mock_fetch_price_cents"
+        ) as mock_fn:
+            self.assertEqual(get_live_price_cents("YFTEST"), 9999)
+            yf_mock.assert_called_once_with("YFTEST")
+            mock_fn.assert_not_called()
+
+    @mock.patch("dividends.services._fetch_ecb_rates", return_value={"EUR": 1.0, "USD": 1.10, "GBP": 0.84})
+    def test_live_fx_rate_cached(self, _ecb):
+        """Live FX rate is fetched from ECB and cached in the FxRate model."""
+        rate = get_fx_rate("USD")
+        self.assertEqual(rate, 1.10)
+        self.assertEqual(FxRate.objects.filter(currency="USD").count(), 1)
+        # Second call uses cache, ECB not called again
+        _ecb.reset_mock()
+        rate2 = get_fx_rate("USD")
+        self.assertEqual(rate2, 1.10)
+        _ecb.assert_not_called()
+
+    @mock.patch("dividends.services._fetch_ecb_rates", return_value=None)
+    def test_fx_rate_falls_back_to_static(self, _ecb):
+        """When ECB fails, the static FX_RATES_FROM_EUR is used."""
+        rate = get_fx_rate("GBP")
+        self.assertEqual(rate, 0.86)  # static fallback
+
     def test_price_etfs_uses_existing_etfs(self):
         Etf.objects.create(ticker="ZZZ", name="Z", weight_pct=100)
         with mock.patch("dividends.services._mock_fetch_price_cents", return_value=5000):
@@ -69,7 +132,7 @@ class PriceServiceTests(TestCase):
         self.assertTrue(any(p.ticker == "ZZZ" for p in priced))
 
 
-class AuthTests(TestCase):
+class AuthTests(NetworkMockedTestCase):
     def test_register_creates_account_and_logs_in(self):
         r = self.client.post(reverse("accounts:register"), {
             "email": "a@b.co", "password": "secret12",
@@ -113,8 +176,9 @@ class AuthTests(TestCase):
         self.assertContains(r, "Invalid credentials")
 
 
-class DashboardTests(TestCase):
+class DashboardTests(NetworkMockedTestCase):
     def setUp(self):
+        super().setUp()
         self.user = User.objects.create_user(username="a@b.co", password="secret12")
         self.client.force_login(self.user)
 
@@ -139,6 +203,19 @@ class DashboardTests(TestCase):
         c = Contribution.objects.get(user=self.user, year=2026, month=4)
         self.assertEqual(c.amount_cents, 50_000)
         self.assertEqual(c.carry_in_cents, 2_500)
+
+    def test_save_contribution_converts_gbp_to_eur(self):
+        """When the session currency is GBP, the saved amount should be in EUR."""
+        session = self.client.session
+        session["currency"] = "GBP"
+        session.save()
+        with mock.patch("dividends.services._mock_fetch_price_cents", return_value=5000):
+            self.client.post(reverse("dividends:save_contribution"), {
+                "year": 2026, "month": 5, "amount": "100", "carry_in": "0",
+            })
+        c = Contribution.objects.get(user=self.user, year=2026, month=5)
+        # 100 GBP in cents = 10000; converted to EUR = 10000 / 0.86 ≈ 11628
+        self.assertEqual(c.amount_cents, 11628)
 
     def test_save_contribution_updates_on_conflict(self):
         Contribution.objects.create(user=self.user, year=2026, month=4, amount_cents=100, carry_in_cents=0)
@@ -165,8 +242,9 @@ class DashboardTests(TestCase):
         self.assertEqual(r.status_code, 400)
 
 
-class PreferencesTests(TestCase):
+class PreferencesTests(NetworkMockedTestCase):
     def setUp(self):
+        super().setUp()
         self.user = User.objects.create_user(username="a@b.co", password="secret12")
         self.client.force_login(self.user)
 

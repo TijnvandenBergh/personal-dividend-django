@@ -6,5 +6,4 @@ class DividendsConfig(AppConfig):
     name = "dividends"
 
     def ready(self) -> None:  # pragma: no cover
-        from django.db.models.signals import post_migrate
-        from . import signals  # noqa: F401
+        from . import signals  # noqa: F401 pylint: disable=import-outside-toplevel,unused-import
