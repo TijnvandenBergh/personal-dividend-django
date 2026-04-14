@@ -1,0 +1,14 @@
+[MAIN]
+load-plugins=pylint_django
+django-settings-module=dividendapp.settings
+
+[MESSAGES CONTROL]
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    too-few-public-methods,
+    import-outside-toplevel
+
+[FORMAT]
+max-line-length=120

@@ -3,3 +3,6 @@ gunicorn>=21.2
 whitenoise>=6.6
 django-ratelimit>=4.1
 coverage>=7.4
+yfinance>=0.2.36
+pylint>=3.0
+pylint-django>=2.5

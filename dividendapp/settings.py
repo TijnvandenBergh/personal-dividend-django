@@ -17,7 +17,7 @@ ALLOWED_HOSTS = os.environ.get(
 CSRF_TRUSTED_ORIGINS = [
     o for o in os.environ.get(
         "CSRF_TRUSTED_ORIGINS",
-        "http://localhost:8000 http://127.0.0.1:8000",
+        "http://localhost:8000 http://127.0.0.1:8000 http://0.0.0.0:8000",
     ).split() if o
 ]
 
@@ -115,3 +115,12 @@ SUPPORTED_CURRENCIES = {
 DEFAULT_CURRENCY = "EUR"
 # Simple static FX rates relative to EUR (1 EUR = X). Replace with live provider later.
 FX_RATES_FROM_EUR = {"EUR": 1.0, "USD": 1.08, "GBP": 0.86}
+
+# Map local ticker codes to Yahoo Finance symbols (European ETFs need exchange suffix).
+YAHOO_TICKER_MAP = {
+    "TDIV": "TDIV.AS",
+    "VHYL": "VHYL.AS",
+    "ISPA": "ISPA.AS",
+    "FGQI": "FGQI.L",
+    "SPYD": "SPYD",
+}

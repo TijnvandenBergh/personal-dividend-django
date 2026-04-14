@@ -10,7 +10,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .models import Contribution, Etf
-from .services import calc_allocation, convert_allocation, price_etfs, PricedEtf
+from .services import calc_allocation, convert_allocation, convert_to_eur, get_fx_rate, price_etfs, PricedEtf
 
 
 def _months():
@@ -51,11 +51,13 @@ def dashboard(request):
     monthly_c = convert_allocation(monthly, currency)
     cumulative_c = convert_allocation(cumulative, currency)
 
+    rate = get_fx_rate(currency)
+
     return render(request, "dividends/dashboard.html", {
         "year": year,
         "month": month,
-        "amount": (amount_cents / 100),
-        "carry_in": (carry_in_cents / 100),
+        "amount": round(amount_cents * rate / 100, 2),
+        "carry_in": round(carry_in_cents * rate / 100, 2),
         "months": _months(),
         "monthly": monthly_c,
         "cumulative": cumulative_c,
@@ -77,11 +79,14 @@ def save_contribution(request):
     if not (2000 <= year <= 2100 and 1 <= month <= 12 and amount >= 0 and carry_in >= 0):
         return HttpResponseBadRequest("Invalid input")
 
+    currency = request.session.get("currency", settings.DEFAULT_CURRENCY)
+    amount_cents_foreign = round(amount * 100)
+    carry_in_cents_foreign = round(carry_in * 100)
     Contribution.objects.update_or_create(
         user=request.user, year=year, month=month,
         defaults={
-            "amount_cents": round(amount * 100),
-            "carry_in_cents": round(carry_in * 100),
+            "amount_cents": convert_to_eur(amount_cents_foreign, currency),
+            "carry_in_cents": convert_to_eur(carry_in_cents_foreign, currency),
         },
     )
     return redirect(f"/?year={year}&month={month}")

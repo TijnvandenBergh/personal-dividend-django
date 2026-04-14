@@ -31,6 +31,19 @@ class Contribution(models.Model):
         ]
 
 
+class FxRate(models.Model):
+    currency = models.CharField(max_length=3)
+    rate = models.FloatField(help_text="1 EUR = <rate> <currency>")
+    asof = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-asof"]
+        indexes = [models.Index(fields=["currency", "-asof"])]
+
+    def __str__(self) -> str:
+        return f"EUR/{self.currency} = {self.rate}"
+
+
 class Price(models.Model):
     ticker = models.CharField(max_length=16)
     price_cents = models.IntegerField(validators=[MinValueValidator(0)])
