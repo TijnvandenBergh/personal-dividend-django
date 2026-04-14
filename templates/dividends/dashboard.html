@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load i18n dividend_extras %}
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+{% block body %}
+<div class="page">
+  <div class="container">
+    <section class="card card--toolbar">
+      {% include "partials/currency_switch.html" %}
+      {% include "partials/language_switch.html" %}
+      {% include "partials/theme_toggle.html" %}
+      <form method="post" action="{% url 'accounts:logout' %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn">{% trans "Log out" %}</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="panel">
+        <h3 class="section-title">{% trans "Monthly contribution" %}</h3>
+        <form method="post" action="{% url 'dividends:save_contribution' %}" class="form">
+          {% csrf_token %}
+          <div class="grid">
+            <label><span>{% trans "Year" %}</span>
+              <input type="number" name="year" value="{{ year }}" required />
+            </label>
+            <label><span>{% trans "Month" %}</span>
+              <select name="month">
+                {% for v, label in months %}
+                  <option value="{{ v }}" {% if v == month %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="span2"><span>{% trans "Amount" %} ({{ currency_symbol }})</span>
+              <input type="number" name="amount" step="0.01" value="{{ amount }}" required />
+            </label>
+            <label class="span2"><span>{% trans "Carry-over" %} ({{ currency_symbol }})</span>
+              <input type="number" name="carry_in" step="0.01" value="{{ carry_in }}" />
+            </label>
+          </div>
+          <button class="btn-primary" type="submit">{% trans "Save & compute" %}</button>
+        </form>
+        <p class="hint">{% trans "Tip: carry-over is leftover from last month you want to add to this month's budget." %}</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="panel">
+        <h3 class="section-title">{% trans "Allocation" %}</h3>
+        <p class="subtitle">
+          {% blocktrans with y=year m=month %}Showing results for <strong>{{ y }}</strong> / <strong>{{ m }}</strong>{% endblocktrans %}
+          — {% trans "budget" %}: {{ currency_symbol }}{{ monthly.totals.budget_cents|cents_as_money }}
+        </p>
+        {% with result=monthly %}
+          {% include "partials/allocation_table.html" %}
+        {% endwith %}
+      </div>
+    </section>
+
+    <section class="card full">
+      <div class="panel">
+        <h3 class="section-title">{% trans "Cumulative (all months)" %}</h3>
+        <p class="subtitle">
+          {% trans "Total budget so far" %}: {{ currency_symbol }}{{ cumulative.totals.budget_cents|cents_as_money }}
+        </p>
+        {% with result=cumulative %}
+          {% include "partials/allocation_table.html" %}
+        {% endwith %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

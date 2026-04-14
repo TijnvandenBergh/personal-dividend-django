@@ -1,0 +1,122 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: nl\n"
+
+msgid "Sign in"
+msgstr "Inloggen"
+
+msgid "Email"
+msgstr "E-mail"
+
+msgid "Password"
+msgstr "Wachtwoord"
+
+msgid "Invalid credentials"
+msgstr "Ongeldige inloggegevens"
+
+msgid "Too many login attempts, please try again later."
+msgstr "Te veel inlogpogingen, probeer het later opnieuw."
+
+msgid "Log out"
+msgstr "Uitloggen"
+
+msgid "No account?"
+msgstr "Nog geen account?"
+
+msgid "Create one"
+msgstr "Maak er een aan"
+
+msgid "Create account"
+msgstr "Account aanmaken"
+
+msgid "Register"
+msgstr "Registreren"
+
+msgid "Back to sign in"
+msgstr "Terug naar inloggen"
+
+msgid "Invalid email"
+msgstr "Ongeldig e-mailadres"
+
+msgid "Password must be at least 8 characters"
+msgstr "Wachtwoord moet minstens 8 tekens zijn"
+
+msgid "Email already registered"
+msgstr "E-mailadres is al geregistreerd"
+
+msgid "Dashboard"
+msgstr "Dashboard"
+
+msgid "Monthly contribution"
+msgstr "Maandelijkse bijdrage"
+
+msgid "Year"
+msgstr "Jaar"
+
+msgid "Month"
+msgstr "Maand"
+
+msgid "Amount"
+msgstr "Bedrag"
+
+msgid "Carry-over"
+msgstr "Overdracht"
+
+msgid "Save & compute"
+msgstr "Opslaan & berekenen"
+
+msgid "Tip: carry-over is leftover from last month you want to add to this month's budget."
+msgstr "Tip: overdracht is het restant van vorige maand dat je wilt toevoegen aan het budget van deze maand."
+
+msgid "Allocation"
+msgstr "Allocatie"
+
+msgid "Cumulative (all months)"
+msgstr "Cumulatief (alle maanden)"
+
+msgid "Total budget so far"
+msgstr "Totaal budget tot nu toe"
+
+msgid "ETF"
+msgstr "ETF"
+
+msgid "Weight %"
+msgstr "Gewicht %"
+
+msgid "Price"
+msgstr "Prijs"
+
+msgid "Target"
+msgstr "Doel"
+
+msgid "Shares"
+msgstr "Aandelen"
+
+msgid "Spent"
+msgstr "Besteed"
+
+msgid "Under/Over"
+msgstr "Onder/Over"
+
+msgid "TOTAL spent"
+msgstr "TOTAAL besteed"
+
+msgid "REST"
+msgstr "REST"
+
+msgid "Toggle theme"
+msgstr "Thema wisselen"
+
+msgid "Language"
+msgstr "Taal"
+
+msgid "Currency"
+msgstr "Valuta"
+
+msgid "budget"
+msgstr "budget"
+
+#, python-format
+msgid "Showing results for <strong>%(y)s</strong> / <strong>%(m)s</strong>"
+msgstr "Resultaten voor <strong>%(y)s</strong> / <strong>%(m)s</strong>"

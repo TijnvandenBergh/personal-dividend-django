@@ -1,0 +1,43 @@
+{% load i18n dividend_extras %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>{% trans "ETF" %}</th>
+        <th>{% trans "Weight %" %}</th>
+        <th>{% trans "Price" %} ({{ currency_symbol }})</th>
+        <th>{% trans "Target" %} ({{ currency_symbol }})</th>
+        <th>{% trans "Shares" %}</th>
+        <th>{% trans "Spent" %} ({{ currency_symbol }})</th>
+        <th>{% trans "Under/Over" %} ({{ currency_symbol }})</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for i in result.items %}
+      <tr>
+        <td class="etf">{{ i.name }} <span class="ticker">({{ i.ticker }})</span></td>
+        <td>{{ i.weight_pct|floatformat:0 }}</td>
+        <td>{{ i.price_cents|cents_as_money }}</td>
+        <td>{{ i.target_cents|cents_as_money }}</td>
+        <td>{{ i.shares }}</td>
+        <td>{{ i.spent_cents|cents_as_money }}</td>
+        <td class="{% if i.diff_cents < 0 %}negative{% elif i.diff_cents > 0 %}positive{% endif %}">
+          {{ i.diff_cents|cents_as_money }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="5" class="right">{% trans "TOTAL spent" %} ({{ currency_symbol }})</th>
+        <th>{{ result.totals.spent_cents|cents_as_money }}</th>
+        <th></th>
+      </tr>
+      <tr>
+        <th colspan="5" class="right">{% trans "REST" %} ({{ currency_symbol }})</th>
+        <th>{{ result.totals.rest_cents|cents_as_money }}</th>
+        <th></th>
+      </tr>
+    </tfoot>
+  </table>
+</div>

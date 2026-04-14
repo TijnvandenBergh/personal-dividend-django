@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Sign in" %}{% endblock %}
+{% block body %}
+<div class="page">
+  <div class="container container--narrow">
+    <section class="card">
+      <div class="panel">
+        <div class="login-header">
+          <h3 class="section-title">{% trans "Sign in" %}</h3>
+          {% include "partials/theme_toggle.html" %}
+        </div>
+        <form method="post" class="auth-form" novalidate>
+          {% csrf_token %}
+          <label>
+            {% trans "Email" %}
+            <input type="email" name="email" required autocomplete="username" />
+          </label>
+          <label>
+            {% trans "Password" %}
+            <input type="password" name="password" required autocomplete="current-password" />
+          </label>
+          <button type="submit">{% trans "Sign in" %}</button>
+        </form>
+        {% if error %}
+        <div class="alert error" role="alert">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3L3 21h18L12 3Z" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M12 9v5m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          <span>{{ error }}</span>
+        </div>
+        {% endif %}
+        <p class="muted" style="margin-top:16px;font-size:13px;">
+          {% trans "No account?" %}
+          <a href="{% url 'accounts:register' %}">{% trans "Create one" %}</a>
+        </p>
+        {% include "partials/language_switch.html" %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

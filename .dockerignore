@@ -1,0 +1,11 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+.venv
+venv
+app.db*
+staticfiles
+htmlcov
+.coverage
+node_modules

@@ -1,0 +1,11 @@
+[run]
+source = dividendapp,accounts,dividends
+omit =
+    */migrations/*
+    */wsgi.py
+    */asgi.py
+    manage.py
+
+[report]
+show_missing = True
+fail_under = 80

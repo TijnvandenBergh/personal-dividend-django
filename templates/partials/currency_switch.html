@@ -1,0 +1,13 @@
+{% load i18n %}
+<form method="post" action="{% url 'accounts:set_currency' %}" class="currency-switch">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+  <label class="muted" style="font-size:12px;">
+    {% trans "Currency" %}:
+    <select name="currency" onchange="this.form.submit()">
+      {% for code, meta in supported_currencies.items %}
+        <option value="{{ code }}" {% if code == currency %}selected{% endif %}>{{ meta.symbol }} {{ code }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</form>

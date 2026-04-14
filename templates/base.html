@@ -1,0 +1,23 @@
+{% load static i18n %}<!doctype html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}" data-theme="{{ theme }}">
+<head>
+  <meta charset="utf-8" />
+  <title>{% block title %}Personal Dividend App{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  <script>
+    (function () {
+      try {
+        var stored = window.localStorage.getItem('pda-theme-preference');
+        if (stored === 'light' || stored === 'dark') {
+          document.documentElement.dataset.theme = stored;
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  {% block body %}{% endblock %}
+  <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

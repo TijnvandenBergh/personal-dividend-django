@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+app.db
+app.db-*
+staticfiles/
+.coverage
+htmlcov/
+*.mo
+.DS_Store

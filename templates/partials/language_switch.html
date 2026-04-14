@@ -1,0 +1,15 @@
+{% load i18n %}
+<form method="post" action="{% url 'set_language' %}" class="lang-switch">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+  <label class="muted" style="font-size:12px;">
+    {% trans "Language" %}:
+    <select name="language" onchange="this.form.submit()">
+      {% get_current_language as LANGUAGE_CODE %}
+      {% get_available_languages as LANGUAGES %}
+      {% for code, name in LANGUAGES %}
+        <option value="{{ code }}" {% if code == LANGUAGE_CODE %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</form>

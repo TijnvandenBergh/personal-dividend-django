@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Register" %}{% endblock %}
+{% block body %}
+<div class="page">
+  <div class="container container--narrow">
+    <section class="card">
+      <div class="panel">
+        <div class="login-header">
+          <h3 class="section-title">{% trans "Create account" %}</h3>
+          {% include "partials/theme_toggle.html" %}
+        </div>
+        <form method="post" class="auth-form" novalidate>
+          {% csrf_token %}
+          <label>{% trans "Email" %}<input type="email" name="email" required /></label>
+          <label>{% trans "Password" %}<input type="password" name="password" minlength="8" required /></label>
+          <button type="submit">{% trans "Register" %}</button>
+        </form>
+        {% if error %}<div class="alert error"><span>{{ error }}</span></div>{% endif %}
+        <p class="muted" style="margin-top:16px;font-size:13px;">
+          <a href="{% url 'accounts:login' %}">{% trans "Back to sign in" %}</a>
+        </p>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
